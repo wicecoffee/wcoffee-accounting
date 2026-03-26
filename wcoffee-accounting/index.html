@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生意总帐系统 - W+ Coffee</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Microsoft YaHei", Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+    #loginBox {
+        max-width: 400px;
+        margin: 100px auto;
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    #loginBox h2 { color: #667eea; margin-bottom: 20px; }
+    #loginBox input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+    #loginBox button {
+        width: 100%;
+        padding: 12px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    #loginBox button:hover { opacity: 0.9; }
+    #errorMsg { color: #dc3545; margin-top: 10px; display: none; }
+    #app { display: none; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header { background: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+    .header h1 { color: #667eea; font-size: 32px; }
+    .nav { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .nav button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; }
+    .nav button.active { background: #667eea; color: white; }
+    .nav button:not(.active) { background: #f0f0f0; color: #333; }
+    .nav button:hover:not(.active) { background: #e0e0e0; }
+    .content { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); min-height: 500px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+    th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; }
+    th { background: #667eea; color: white; font-weight: 600; white-space: nowrap; }
+    tr:hover { background: #f5f5f5; }
+    .total-row { background: #fff3cd; font-weight: bold; }
+    .total-row td { color: #856404; }
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin-right: 5px; margin-bottom: 5px; }
+    .btn-primary { background: #28a745; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-info { background: #17a2b8; color: white; }
+    .btn:hover { opacity: 0.9; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+    .summary-card .label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
+    .summary-card .value { font-size: 28px; font-weight: bold; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #333; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #e9ecef; }
+    .tab { padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: #667eea; border-bottom-color: #667eea; }
+    .tab:hover:not(.active) { color: #333; }
+    .store-card { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+    .store-card:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .store-card h3 { color: #667eea; margin-bottom: 10px; }
+    .store-stats { display: flex; gap: 20px; margin-top: 10px; }
+    .store-stat { text-align: center; }
+    .store-stat .value { font-size: 20px; font-weight: bold; color: #667eea; }
+    .store-stat .label { font-size: 12px; color: #666; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; padding: 30px; border-radius: 15px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h2 { color: #667eea; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+    .close-btn:hover { color: #333; }
+    .month-selector {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .month-selector select {
+        padding: 8px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        min-width: 150px;
+    }
+    .month-selector button {
+        padding: 8px 20px;
+    }
+    @media print {
+        body { background: white; padding: 0; }
+        .container { max-width: 100%; }
+        .header, .nav, .month-selector, .close-btn, #loginBox { display: none !important; }
+        #app { display: block !important; }
+        .content { padding: 0; box-shadow: none; }
+        .page { display: block !important; }
+        .summary-card { break-inside: avoid; }
+        table { break-inside: auto; }
+        tr { break-inside: avoid; break-after: auto; }
+        thead { display: table-header-group; }
+        tfoot { display: table-footer-group; }
+    }
+</style>
+</head>
+<body>
+
+<div id="loginBox">
+    <h2>请输入密码访问</h2>
+    <input type="password" id="passwordInput" placeholder="输入访问密码">
+    <button onclick="checkPassword()">进入系统</button>
+    <div id="errorMsg">密码错误，请重试</div>
+</div>
+
+<div id="app">
+
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>生意总帐系统 - W+ Coffee</h1>
+    </div>
+    
+    <div class="nav">
+        <button class="active" onclick="showPage('home')">🏠 首页总览</button>
+        <button onclick="showPage('monthly')">📅 月度统计</button>
+    </div>
+    
+    <div class="content">
+        <div id="homePage" class="page active">
+            <h2>📊 首页总览</h2>
+            <div class="summary-grid" id="summaryGrid">
+            </div>
+            <h3 style="margin-top: 20px;">🏪 门店列表</h3>
+            <div id="storeList">
+            </div>
+        </div>
+
+        <div id="monthlyPage" class="page">
+            <h2>📅 月度统计</h2>
+            <div class="month-selector">
+                <label>选择门店：</label>
+                <select id="monthStoreSelect"></select>
+                <label>选择月份：</label>
+                <select id="monthSelect"></select>
+                <button class="btn btn-info" onclick="renderMonthly()">查询</button>
+                <button class="btn btn-primary" onclick="printMonthly()">🖨️ 打印报表</button>
+                <button class="btn btn-info" onclick="showPage('home')">返回首页</button>
+            </div>
+            <div class="summary-grid" id="monthlySummary">
+            </div>
+            <div id="monthlyTables">
+            </div>
+        </div>
+        
+        <div id="storePage" class="page">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="storeTitle">门店详情</h2>
+                <button class="btn btn-info" onclick="showPage('home')">返回首页</button>
+            </div>
+            <div class="tabs">
+                <button class="tab active" onclick="switchStoreTab('income')">💰 收入</button>
+                <button class="tab" onclick="switchStoreTab('expense')">💸 支出</button>
+                <button class="tab" onclick="switchStoreTab('purchase')">📦 采购</button>
+            </div>
+            <div id="storeContent">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="addRecordModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">添加记录</h2>
+            <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <div id="modalForm">
+        </div>
+    </div>
+</div>
+
+<script>
+// 密码验证 - 你可以自己改这里的密码
+const CORRECT_PASSWORD = 'yinghao328';
+
+function checkPassword() {
+    const password = document.getElementById('passwordInput').value;
+    if (password === CORRECT_PASSWORD) {
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        // 记住登录状态（7天内不用再输）
+        localStorage.setItem('accounting_auth', 'true');
+    } else {
+        document.getElementById('errorMsg').style.display = 'block';
+    }
+}
+
+// 检查是否已经登录过
+window.onload = function() {
+    const auth = localStorage.getItem('accounting_auth');
+    if (auth === 'true') {
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+    }
+    init();
+};
+
+const defaultStores = [
+    {
+        id: '龙光店',
+        name: '龙光店',
+        investment: 0,
+        incomes: [],
+        expenses: [
+            { date: '2026-03-26', item: '2026年作帐费用', amount: 2700, note: '财务' }
+        ],
+        purchases: [
+            { date: '2026-03-26', item: '双杯袋', quantity: 5000, unit: '个', price: 0.57, total: 2850, note: '' },
+            { date: '2026-03-26', item: '单杯袋', quantity: 5000, unit: '个', price: 0.56, total: 2800, note: '' },
+            { date: '2026-03-26', item: '热杯', quantity: 5000, unit: '个', price: 0.58, total: 2900, note: '' },
+            { date: '2026-03-26', item: '冷杯', quantity: 5000, unit: '个', price: 0.38, total: 1900, note: '' }
+        ]
+    },
+    {
+        id: '海城路店',
+        name: '海城路店',
+        investment: 30000,
+        investor: '潘明',
+        incomes: [],
+        expenses: [
+            { date: '2026-03-23', item: '转让费', amount: 27500, note: '咖啡店转让费' }
+        ],
+        purchases: [
+            { date: '2026-03-26', item: '星崎制冰机 KM-40C', quantity: 1, unit: '台', price: 7240, total: 7240, note: '' },
+            { date: '2026-03-26', item: '碧然徳净水系统 C1000 AC滤芯+滤头', quantity: 1, unit: '套', price: 1054.85, total: 1054.85, note: '' },
+            { date: '2026-03-26', item: '风味大师 C500 滤芯+滤头', quantity: 1, unit: '套', price: 2269.15, total: 2269.15, note: '' }
+        ]
+    },
+    {
+        id: '旭美山店',
+        name: '旭美山店',
+        investment: 70000,
+        investor: '蓝卓',
+        incomes: [],
+        expenses: [],
+        purchases: []
+    }
+];
+
+let stores = [];
+let currentStore = null;
+let currentStoreTab = 'income';
+let currentMonth = null;
+
+function init() {
+    loadData();
+    renderHome();
+}
+
+function loadData() {
+    stores = [...defaultStores];
+    saveStores();
+}
+
+function saveStores() {
+    localStorage.setItem('accounting_stores_simple', JSON.stringify(stores));
+}
+
+function showPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+    
+    if (page === 'home') {
+        document.getElementById('homePage').classList.add('active');
+        document.querySelectorAll('.nav button')[0].classList.add('active');
+        renderHome();
+    } else if (page === 'monthly') {
+        document.getElementById('monthlyPage').classList.add('active');
+        document.querySelectorAll('.nav button')[1].classList.add('active');
+        initMonthlySelect();
+        renderMonthly();
+    } else if (page === 'store') {
+        document.getElementById('storePage').classList.add('active');
+        renderStore();
+    }
+}
+
+function renderHome() {
+    const totalInvestment = stores.reduce((sum, s) => sum + s.investment, 0);
+    const totalIncome = stores.reduce((sum, s) => sum + s.incomes.reduce((s2, i) => s2 + i.amount, 0), 0);
+    const totalExpense = stores.reduce((sum, s) => sum + s.expenses.reduce((s2, e) => s2 + e.amount, 0), 0);
+    const totalPurchase = stores.reduce((sum, s) => sum + s.purchases.reduce((s2, p) => s2 + p.total, 0), 0);
+    
+    document.getElementById('summaryGrid').innerHTML = `
+        <div class="summary-card">
+            <div class="label">总投资</div>
+            <div class="value">¥${totalInvestment.toLocaleString()}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">总收入</div>
+            <div class="value">¥${totalIncome.toLocaleString()}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">总支出</div>
+            <div class="value">¥${(totalExpense + totalPurchase).toLocaleString()}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">剩余资金</div>
+            <div class="value">¥${(totalInvestment + totalIncome - totalExpense - totalPurchase).toLocaleString()}</div>
+        </div>
+    `;
+    
+    document.getElementById('storeList').innerHTML = stores.map(store => {
+        const storeIncome = store.incomes.reduce((sum, i) => sum + i.amount, 0);
+        const storeExpense = store.expenses.reduce((sum, e) => sum + e.amount, 0);
+        const storePurchase = store.purchases.reduce((sum, p) => sum + p.total, 0);
+        
+        return `
+            <div class="store-card" onclick="openStore('${store.id}')">
+                <h3>🏪 ${store.name}${store.investor ? ` (投资人：${store.investor})` : ''}</h3>
+                <div class="store-stats">
+                    <div class="store-stat">
+                        <div class="value">¥${store.investment.toLocaleString()}</div>
+                        <div class="label">投资</div>
+                    </div>
+                    <div class="store-stat">
+                        <div class="value">¥${storeIncome.toLocaleString()}</div>
+                        <div class="label">收入</div>
+                    </div>
+                    <div class="store-stat">
+                        <div class="value">¥${(storeExpense + storePurchase).toLocaleString()}</div>
+                        <div class="label">支出</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openStore(storeId) {
+    currentStore = stores.find(s => s.id === storeId);
+    currentStoreTab = 'income';
+    showPage('store');
+}
+
+function renderStore() {
+    document.getElementById('storeTitle').textContent = `🏪 ${currentStore.name}`;
+    
+    document.querySelectorAll('.tabs .tab').forEach((tab, index) => {
+        tab.classList.remove('active');
+        if ((currentStoreTab === 'income' && index === 0) ||
+            (currentStoreTab === 'expense' && index === 1) ||
+            (currentStoreTab === 'purchase' && index === 2)) {
+            tab.classList.add('active');
+        }
+    });
+    
+    let records = [];
+    let title = '';
+    
+    if (currentStoreTab === 'income') {
+        records = currentStore.incomes;
+        title = '收入记录';
+    } else if (currentStoreTab === 'expense') {
+        records = currentStore.expenses;
+        title = '支出记录';
+    } else {
+        records = currentStore.purchases;
+        title = '采购记录';
+    }
+    
+    const total = currentStoreTab === 'purchase' 
+        ? records.reduce((sum, r) => sum + r.total, 0)
+        : records.reduce((sum, r) => sum + r.amount, 0);
+    
+    let tableHtml = '';
+    if (currentStoreTab === 'purchase') {
+        tableHtml = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>${title}</h3>
+            <button class="btn btn-primary" onclick="showModal()">+ 添加记录</button>
+        </div>
+        <div class="summary-card" style="max-width: 300px; margin-bottom: 15px;">
+            <div class="label">总计</div>
+            <div class="value">¥${total.toLocaleString()}</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>物品名称</th>
+                    <th>数量</th>
+                    <th>单位</th>
+                    <th>单价</th>
+                    <th>总价</th>
+                    <th>备注</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${records.map((r, index) => `
+                    <tr>
+                        <td>${r.date}</td>
+                        <td>${r.item}</td>
+                        <td>${r.quantity.toLocaleString()}</td>
+                        <td>${r.unit}</td>
+                        <td>¥${r.price.toFixed(2)}</td>
+                        <td>¥${r.total.toLocaleString()}</td>
+                        <td>${r.note || ''}</td>
+                        <td><button class="btn btn-danger" onclick="deleteRecord(${index})">删除</button></td>
+                    </tr>
+                `).join('')}
+                ${records.length === 0 ? '<tr><td colspan="8" style="text-align:center;color:#999;">暂无记录</td></tr>' : ''}
+            </tbody>
+        </table>
+        `;
+    } else {
+        tableHtml = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>${title}</h3>
+            <button class="btn btn-primary" onclick="showModal()">+ 添加记录</button>
+        </div>
+        <div class="summary-card" style="max-width: 300px; margin-bottom: 15px;">
+            <div class="label">总计</div>
+            <div class="value">¥${total.toLocaleString()}</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>项目</th>
+                    <th>金额</th>
+                    <th>备注</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${records.map((r, index) => `
+                    <tr>
+                        <td>${r.date}</td>
+                        <td>${r.item}</td>
+                        <td>¥${r.amount.toLocaleString()}</td>
+                        <td>${r.note || ''}</td>
+                        <td><button class="btn btn-danger" onclick="deleteRecord(${index})">删除</button></td>
+                    </tr>
+                `).join('')}
+                ${records.length === 0 ? '<tr><td colspan="5" style="text-align:center;color:#999;">暂无记录</td></tr>' : ''}
+            </tbody>
+        </table>
+        `;
+    }
+    
+    document.getElementById('storeContent').innerHTML = tableHtml;
+}
+
+function switchStoreTab(tab) {
+    currentStoreTab = tab;
+    renderStore();
+}
+
+function showModal() {
+    document.getElementById('recordDate')?.value || (document.getElementById('modalForm').innerHTML = getModalForm());
+    document.getElementById('recordDate')?.value || (document.getElementById('recordDate').value = new Date().toISOString().split('T')[0]);
+    document.getElementById('addRecordModal').classList.add('active');
+}
+
+function getModalForm() {
+    if (currentStoreTab === 'purchase') {
+        return `
+            <div class="form-group">
+                <label>日期</label>
+                <input type="date" id="recordDate">
+            </div>
+            <div class="form-group">
+                <label>物品名称</label>
+                <input type="text" id="recordItem" placeholder="请输入物品名称">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>数量</label>
+                    <input type="number" id="recordQuantity" placeholder="请输入数量" step="1">
+                </div>
+                <div class="form-group">
+                    <label>单位</label>
+                    <input type="text" id="recordUnit" placeholder="个/箱/包等">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>单价</label>
+                    <input type="number" id="recordPrice" placeholder="请输入单价" step="0.01" onchange="calculateTotal()">
+                </div>
+                <div class="form-group">
+                    <label>总价</label>
+                    <input type="number" id="recordTotal" placeholder="自动计算或手动输入" step="0.01">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>备注</label>
+                <input type="text" id="recordNote" placeholder="可选">
+            </div>
+            <button class="btn btn-primary" onclick="saveRecord()">保存</button>
+        `;
+    } else {
+        return `
+            <div class="form-group">
+                <label>日期</label>
+                <input type="date" id="recordDate">
+            </div>
+            <div class="form-group">
+                <label>项目</label>
+                <input type="text" id="recordItem" placeholder="请输入项目名称">
+            </div>
+            <div class="form-group">
+                <label>金额</label>
+                <input type="number" id="recordAmount" placeholder="请输入金额">
+            </div>
+            <div class="form-group">
+                <label>备注</label>
+                <input type="text" id="recordNote" placeholder="可选">
+            </div>
+            <button class="btn btn-primary" onclick="saveRecord()">保存</button>
+        `;
+    }
+}
+
+function calculateTotal() {
+    const quantity = parseFloat(document.getElementById('recordQuantity')?.value || 0);
+    const price = parseFloat(document.getElementById('recordPrice')?.value || 0);
+    if (quantity && price) {
+        document.getElementById('recordTotal').value = (quantity * price).toFixed(2);
+    }
+}
+
+function closeModal() {
+    document.getElementById('addRecordModal').classList.remove('active');
+}
+
+function saveRecord() {
+    const date = document.getElementById('recordDate').value;
+    const item = document.getElementById('recordItem').value;
+    const note = document.getElementById('recordNote')?.value || '';
+    
+    if (!date || !item) {
+        alert('请填写完整信息！');
+        return;
+    }
+    
+    let record;
+    
+    if (currentStoreTab === 'purchase') {
+        const quantity = parseFloat(document.getElementById('recordQuantity').value);
+        const unit = document.getElementById('recordUnit').value;
+        const price = parseFloat(document.getElementById('recordPrice').value);
+        const total = parseFloat(document.getElementById('recordTotal').value);
+        
+        if (!quantity || !unit || !price || !total) {
+            alert('请填写完整信息！');
+            return;
+        }
+        
+        record = { date, item, quantity, unit, price, total, note };
+        currentStore.purchases.push(record);
+    } else {
+        const amount = parseFloat(document.getElementById('recordAmount').value);
+        if (!amount) {
+            alert('请填写金额！');
+            return;
+        }
+        
+        record = { date, item, amount, note };
+        if (currentStoreTab === 'income') {
+            currentStore.incomes.push(record);
+        } else {
+            currentStore.expenses.push(record);
+        }
+    }
+    
+    saveStores();
+    closeModal();
+    renderStore();
+}
+
+function deleteRecord(index) {
+    if (confirm('确定要删除这条记录吗？')) {
+        if (currentStoreTab === 'income') {
+            currentStore.incomes.splice(index, 1);
+        } else if (currentStoreTab === 'expense') {
+            currentStore.expenses.splice(index, 1);
+        } else {
+            currentStore.purchases.splice(index, 1);
+        }
+        saveStores();
+        renderStore();
+    }
+}
+
+function initMonthlySelect() {
+    const monthSelect = document.getElementById('monthSelect');
+    const storeSelect = document.getElementById('monthStoreSelect');
+    if (monthSelect.options.length > 0) return;
+    
+    // 添加门店选择 - 全部+每个门店
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = '全部门店';
+    storeSelect.appendChild(allOption);
+    stores.forEach(store => {
+        const option = document.createElement('option');
+        option.value = store.id;
+        option.textContent = store.name;
+        storeSelect.appendChild(option);
+    });
+    
+    // 获取所有有记录的月份
+    const months = new Set();
+    stores.forEach(store => {
+        [...store.incomes, ...store.expenses, ...store.purchases].forEach(record => {
+            const month = record.date.substring(0, 7); // YYYY-MM
+            months.add(month);
+        });
+    });
+    
+    // 添加到选择框
+    Array.from(months).sort().reverse().forEach(month => {
+        const option = document.createElement('option');
+        option.value = month;
+        option.textContent = month;
+        monthSelect.appendChild(option);
+    });
+    
+    // 默认选中最新月份和全部门店
+    if (monthSelect.options.length > 0) {
+        monthSelect.value = monthSelect.options[0].value;
+        currentMonth = monthSelect.options[0].value;
+    }
+}
+
+function renderMonthly() {
+    const monthSelect = document.getElementById('monthSelect');
+    const storeSelect = document.getElementById('monthStoreSelect');
+    currentMonth = monthSelect.value;
+    const selectedStoreId = storeSelect.value;
+    
+    // 汇总选中门店当月数据
+    let monthlyIncome = 0;
+    let monthlyExpense = 0;
+    let monthlyPurchase = 0;
+    const storeData = {};
+    
+    stores.forEach(store => {
+        // 如果选了特定门店，只处理选中的
+        if (selectedStoreId !== 'all' && store.id !== selectedStoreId) {
+            return;
+        }
+        
+        storeData[store.id] = {
+            name: store.name,
+            income: 0,
+            expense: 0,
+            purchase: 0,
+            incomeRecords: [],
+            expenseRecords: [],
+            purchaseRecords: []
+        };
+        
+        // 统计收入
+        store.incomes.filter(r => r.date.startsWith(currentMonth)).forEach(r => {
+            storeData[store.id].income += r.amount;
+            storeData[store.id].incomeRecords.push(r);
+            monthlyIncome += r.amount;
+        });
+        
+        // 统计支出
+        store.expenses.filter(r => r.date.startsWith(currentMonth)).forEach(r => {
+            storeData[store.id].expense += r.amount;
+            storeData[store.id].expenseRecords.push(r);
+            monthlyExpense += r.amount;
+        });
+        
+        // 统计采购
+        store.purchases.filter(r => r.date.startsWith(currentMonth)).forEach(r => {
+            storeData[store.id].purchase += r.total;
+            storeData[store.id].purchaseRecords.push(r);
+            monthlyPurchase += r.total;
+        });
+    });
+    
+    const totalExpense = monthlyExpense + monthlyPurchase;
+    const profit = monthlyIncome - totalExpense;
+    const selectedStoreText = storeSelect.options[storeSelect.selectedIndex].text;
+    
+    // 渲染汇总卡片
+    document.getElementById('monthlySummary').innerHTML = `
+        <div class="summary-card" style="grid-column: 1 / -1;">
+            <div class="label">${selectedStoreText} - ${currentMonth} 财务报表</div>
+            <div class="value">W+ Coffee</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">总收入</div>
+            <div class="value">¥${monthlyIncome.toLocaleString()}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">总支出</div>
+            <div class="value">¥${totalExpense.toLocaleString()}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">采购总额</div>
+            <div class="value">¥${monthlyPurchase.toLocaleString()}</div>
+        </div>
+        <div class="summary-card" style="background: ${profit >= 0 ? 'linear-gradient(135deg, #28a745 0%, #1e7e34 100%)' : 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)'}">
+            <div class="label">本月利润</div>
+            <div class="value">¥${profit.toLocaleString()}</div>
+        </div>
+    `;
+    
+    // 渲染各个门店详细表格
+    let tablesHtml = '';
+    Object.values(storeData).forEach(s => {
+        if (s.incomeRecords.length === 0 && s.expenseRecords.length === 0 && s.purchaseRecords.length === 0) {
+            return;
+        }
+        
+        tablesHtml += `<h3 style="margin-top: 25px; margin-bottom: 10px;">🏪 ${s.name} 明细</h3>`;
+        
+        // 收入表格
+        if (s.incomeRecords.length > 0) {
+            tablesHtml += `
+                <h4 style="margin: 15px 0 5px;">💰 收入 (总计: ¥${s.income.toLocaleString()})</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>项目</th>
+                            <th>金额</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${s.incomeRecords.map(r => `
+                            <tr>
+                                <td>${r.date}</td>
+                                <td>${r.item}</td>
+                                <td>¥${r.amount.toLocaleString()}</td>
+                                <td>${r.note || ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        // 支出表格
+        if (s.expenseRecords.length > 0) {
+            tablesHtml += `
+                <h4 style="margin: 15px 0 5px;">💸 支出 (总计: ¥${s.expense.toLocaleString()})</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>项目</th>
+                            <th>金额</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${s.expenseRecords.map(r => `
+                            <tr>
+                                <td>${r.date}</td>
+                                <td>${r.item}</td>
+                                <td>¥${r.amount.toLocaleString()}</td>
+                                <td>${r.note || ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        // 采购表格
+        if (s.purchaseRecords.length > 0) {
+            tablesHtml += `
+                <h4 style="margin: 15px 0 5px;">📦 采购 (总计: ¥${s.purchase.toLocaleString()})</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>物品名称</th>
+                            <th>数量</th>
+                            <th>单位</th>
+                            <th>单价</th>
+                            <th>总价</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${s.purchaseRecords.map(r => `
+                            <tr>
+                                <td>${r.date}</td>
+                                <td>${r.item}</td>
+                                <td>${r.quantity.toLocaleString()}</td>
+                                <td>${r.unit}</td>
+                                <td>¥${r.price.toFixed(2)}</td>
+                                <td>¥${r.total.toLocaleString()}</td>
+                                <td>${r.note || ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+    });
+    
+    if (tablesHtml === '') {
+        tablesHtml = `<p style="text-align:center;color:#999;padding:30px;">${currentMonth} 暂无任何记录</p>`;
+    }
+    
+    document.getElementById('monthlyTables').innerHTML = tablesHtml;
+}
+
+function printMonthly() {
+    // 先重新渲染确保数据最新
+    renderMonthly();
+    // 调用浏览器打印
+    window.print();
+}
+
+// init moved to window.onload
+</script>
+</body>
+</html>
